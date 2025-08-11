@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AbsorpGen AI – Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="mx-auto max-w-2xl p-6">
+    <h1 class="text-3xl font-bold mb-1">AbsorpGen AI</h1>
+    <p class="text-sm text-gray-600 mb-6">Safety-first OTC helper (demo)</p>
+
+    <form id="form" class="space-y-4 bg-white p-5 rounded-xl shadow">
+      <div class="grid grid-cols-2 gap-3">
+        <input type="number" step="1" placeholder="Age" id="age" class="border rounded p-2" />
+        <input type="text" placeholder="Sex (M/F/Other)" id="sex" class="border rounded p-2" />
+        <input type="text" placeholder="Height (e.g., 5.11, 5'11, 5-11, 5 11, 5.6)" id="height_ftin" class="border rounded p-2" />
+        <input type="number" step="0.1" placeholder="Weight (lbs)" id="weight_lb" class="border rounded p-2" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <input type="text" placeholder="Symptoms (comma separated)" id="symptoms" class="border rounded p-2" />
+        <input type="text" placeholder="Allergies (comma separated)" id="allergies" class="border rounded p-2" />
+      </div>
+
+      <input type="text" placeholder="Known conditions (comma separated)" id="conditions" class="border rounded p-2 w-full" />
+
+      <!-- Pain level and Notes -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="border rounded p-3">
+          <label class="text-sm text-gray-600">Pain level (0–10)</label>
+          <input type="range" id="pain_level" min="0" max="10" value="0" class="w-full" />
+          <div class="text-xs text-gray-500 mt-1">Current: <span id="pain_val">0</span></div>
+        </div>
+        <input type="text" id="notes" placeholder='Notes (e.g., "I took Tylenol 2 hours ago")' class="border rounded p-2" />
+      </div>
+
+      <button class="px-5 py-2.5 rounded-lg bg-black text-white text-sm font-semibold">Get recommendation</button>
+    </form>
+
+    <!-- Warning / Results -->
+    <div id="banner" class="hidden mt-5 p-4 rounded-lg border"></div>
+
+    <div id="card" class="hidden mt-4 bg-white rounded-xl shadow">
+      <div class="p-5">
+        <h2 id="cardTitle" class="text-2xl font-bold mb-1"></h2>
+        <p id="genericName" class="text-gray-500 mb-4"></p>
+
+        <div id="advice" class="hidden mb-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 text-sm p-3"></div>
+
+        <div class="grid sm:grid-cols-2 gap-3 mb-4">
+          <div class="rounded-lg bg-gray-50 p-4">
+            <div class="text-sm text-gray-500">How to take it</div>
+            <div id="howToTake" class="mt-1 text-xl font-semibold"></div>
+          </div>
+          <div class="rounded-lg bg-gray-50 p-4">
+            <div class="text-sm text-gray-500">Max per 24 hours</div>
+            <div id="maxDaily" class="mt-1 text-xl font-semibold"></div>
+          </div>
+        </div>
+
+        <div class="rounded-lg bg-gray-50 p-4 mb-4">
+          <div class="text-sm text-gray-500 mb-1">Possible side effects</div>
+          <div id="sideEffects" class="text-base leading-relaxed"></div>
+        </div>
+
+        <div id="unitConfirm" class="text-xs text-gray-500"></div>
+      </div>
+      <div class="px-5 py-3 bg-gray-100 rounded-b-xl text-xs text-gray-600">
+        IMPORTANT: This demo is not medical advice. Always consult a clinician for diagnosis and treatment.
+      </div>
+    </div>
+
+    <!-- Raw error -->
+    <pre id="out" class="hidden mt-6 bg-gray-900 text-gray-100 p-4 rounded-xl text-sm overflow-auto"></pre>
+  </div>
+
+  <script>
+    // Robust API base:
+    // - If you serve the page from Flask (port 5000), use same-origin.
+    // - If you serve from another port (e.g., 8080), force it to hit Flask on 5000.
+    const API_BASE = (window.location.port === '5000')
+      ? window.location.origin
+      : 'http://127.0.0.1:5000';
+
+    const form = document.getElementById('form');
+    const out = document.getElementById('out');
+    const banner = document.getElementById('banner');
+    const card = document.getElementById('card');
+    const painRange = document.getElementById('pain_level');
+    const painVal = document.getElementById('pain_val');
+
+    painRange.addEventListener('input', () => { painVal.textContent = painRange.value; });
+
+    function parseHeight(value) {
+      if (!value) return { feet: 0, inches: 0 };
+      const s = value.trim();
+      const m = s.match(/^(\d+)\s*['\-\s]\s*(\d{1,2})$/);
+      if (m) return { feet: parseInt(m[1],10), inches: parseInt(m[2],10) };
+      const num = parseFloat(s);
+      if (Number.isNaN(num) || num <= 0) return { feet: 0, inches: 0 };
+      const feet = Math.floor(num);
+      const frac = num - feet;
+      let inches = Math.round(frac * 100);
+      if (inches > 11) inches = Math.round(frac * 12);
+      if (inches > 11) inches = 11;
+      return { feet, inches };
+    }
+
+    function splitCSV(str) {
+      return (str || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .filter(s => !/^none|n\/a|null|na$/i.test(s));
+    }
+
+    function computeWarning({ age, symptoms, conditions, pain_level }) {
+      const txt = (symptoms.concat(conditions)).join(' ').toLowerCase();
+      const hard = /(severe|crushing|unbearable|fainting|shortness of breath|can't breathe|chest pain|stroke|heart attack|blood in|black stools|suicidal)/i;
+      if (hard.test(txt)) return 'red';
+      if ((age && age < 12) || (age && age >= 65)) return 'medium';
+      if (pain_level >= 8) return 'medium';
+      if (symptoms.length >= 3) return 'medium';
+      if (symptoms.length === 2) return 'low';
+      const mildChronic = /(asthma|hypertension|diabetes|ulcer|reflux|gerd|migraine|kidney|liver)/i;
+      if (mildChronic.test(txt)) return 'low';
+      return 'none';
+    }
+
+    function showBanner(level, text) {
+      banner.classList.remove('hidden');
+      banner.className = 'mt-5 p-4 rounded-lg border';
+      const styles = {
+        low:    'bg-yellow-50 border-yellow-200 text-yellow-900',
+        medium: 'bg-orange-50 border-orange-200 text-orange-900',
+        red:    'bg-red-50 border-red-200 text-red-900'
+      };
+      banner.className += ' ' + (styles[level] || 'bg-gray-50 border-gray-200 text-gray-800');
+      banner.innerHTML = `<div class="text-sm font-semibold mb-1">⚠️ ${level.toUpperCase()} WARNING</div>
+                          <div class="text-sm leading-relaxed">${text}</div>`;
+    }
+    function hideBanner(){ banner.classList.add('hidden'); }
+    function hideCard(){ card.classList.add('hidden'); }
+    function showRaw(t){ out.classList.remove('hidden'); out.textContent = t; }
+    function hideRaw(){ out.classList.add('hidden'); out.textContent = ''; }
+
+    function renderCard(rec){
+      const dn = rec.drug_name || '';
+      const brand = dn.includes('(') ? dn.split('(')[0].trim() : dn;
+      const generic = dn.includes('(') ? dn.slice(dn.indexOf('(')).replace(/[()]/g,'').trim() : '';
+
+      document.getElementById('cardTitle').textContent = brand || 'Recommendation';
+      document.getElementById('genericName').textContent = generic ? `(${generic})` : '';
+
+      const adviceBox = document.getElementById('advice');
+      const adviceTxt = rec.timing_advice || rec.additional_advice || '';
+      if (adviceTxt) { adviceBox.textContent = adviceTxt; adviceBox.classList.remove('hidden'); }
+      else { adviceBox.classList.add('hidden'); adviceBox.textContent = ''; }
+
+      document.getElementById('howToTake').textContent = rec.frequency || rec.dosage || '—';
+      const maxDaily = rec.dose_basis?.max_daily_mg;
+      document.getElementById('maxDaily').textContent = maxDaily ? `${maxDaily} mg` : 'Follow label directions';
+
+      document.getElementById('sideEffects').textContent = rec.side_effects || '—';
+
+      const b = rec.dose_basis || {};
+      let confirm = '';
+      if (b.form === 'tablet' && b.units_per_dose){
+        confirm = `Confirmed: ${b.units_per_dose} × ${b.per_unit_mg}mg = ${b.confirmed_total_mg}mg per dose.`;
+      } else if (b.form === 'liquid' && b.ml_per_dose){
+        confirm = `Confirmed: ${b.ml_per_dose} mL × ${b.mg_per_ml} mg/mL ≈ ${b.confirmed_total_mg}mg per dose.`;
+      } else if (b.confirmed_total_mg){
+        confirm = `Confirmed: ${b.confirmed_total_mg}mg per dose.`;
+      }
+      if (b.single_dose_cap_mg){
+        confirm += `${confirm ? ' ' : ''}(Single-dose cap: ${b.single_dose_cap_mg} mg)`;
+      }
+      document.getElementById('unitConfirm').textContent = confirm;
+
+      card.classList.remove('hidden');
+    }
+
+    const painRangeEl = document.getElementById('pain_level');
+    const painValEl = document.getElementById('pain_val');
+    painRangeEl.addEventListener('input', () => painValEl.textContent = painRangeEl.value);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideRaw(); hideBanner(); hideCard();
+
+      const { feet, inches } = parseHeight(document.getElementById('height_ftin').value);
+      const totalInches = feet * 12 + inches;
+      const height_cm = +(totalInches * 2.54).toFixed(2);
+
+      const weightLb = parseFloat(document.getElementById('weight_lb').value || 0);
+      const weight_kg = +(weightLb * 0.453592).toFixed(2);
+
+      const symptoms = splitCSV(document.getElementById('symptoms').value);
+      const allergies = splitCSV(document.getElementById('allergies').value);
+      const conditions = splitCSV(document.getElementById('conditions').value);
+      const pain_level = parseInt(document.getElementById('pain_level').value || 0);
+      const notes = (document.getElementById('notes').value || '').trim();
+
+      const age = parseInt(document.getElementById('age').value || 0);
+      const sex = document.getElementById('sex').value || null;
+
+      const level = computeWarning({ age, symptoms, conditions, pain_level });
+      if (level === 'low')   showBanner('low', 'This looks minor. Monitor your symptoms. If they worsen or persist, talk to a clinician.');
+      if (level === 'medium')showBanner('medium', 'Use caution. If pain worsens, new symptoms appear, or relief is not achieved, seek medical advice.');
+      if (level === 'red')   showBanner('red', 'Potentially serious symptoms detected. The system may refuse to recommend a medication. Consider urgent care.');
+
+      const payload = { age, sex, height_cm, weight_kg, symptoms, allergies, conditions, pain_level, notes };
+
+      showRaw('Loading…');
+      try {
+        const res = await fetch(`${API_BASE}/recommend`, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          cache: 'no-store',
+        });
+
+        const text = await res.text();
+        if (!res.ok) { showRaw(`HTTP ${res.status} ${res.statusText}\n\n${text}`); return; }
+
+        let data;
+        try { data = JSON.parse(text); }
+        catch { showRaw(`Server returned non-JSON:\n\n${text}`); return; }
+
+        if (data.triage_alert) { showBanner('red', `${data.triage_alert}: ${data.message}`); hideRaw(); return; }
+
+        renderCard(data);
+        hideRaw();
+      } catch (err) {
+        showRaw('Network error: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
