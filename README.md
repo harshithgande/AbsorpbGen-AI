@@ -1,119 +1,95 @@
-# AbsorpGen AI - Safety-First OTC Helper
+# AbsorpGen AI - AI Pharmacist System
 
-AbsorpGen AI is a **safety-first OTC helper** that provides personalized medication recommendations with intelligent dosing guidance. The system combines deterministic safety rules with OpenAI-powered dosing optimization while maintaining strict security practices.
+AbsorpGen AI is an **AI-powered pharmacist system** that provides intelligent medication recommendations with comprehensive safety validation. The system combines deterministic AI decision-making with multi-layer safety protocols to ensure patient safety.
 
-## 🚀 Features
+## 🚀 **Key Features**
 
-- **Red-flag triage** for dangerous symptoms
-- **Intelligent OTC selection** based on symptoms, allergies, and conditions
-- **OpenAI-powered dosing** with safety caps and fallbacks
-- **Notes-aware routing** that considers recent medication history
-- **Deterministic behavior** for consistent recommendations
-- **Server-side security** - API keys never exposed to the browser
+- **AI Pharmacist**: Intelligent medication selection and dosing
+- **Multi-Layer Safety**: Triple-validation system with AI override capability
+- **Context-Aware Routing**: Considers recent medications, pain level, and conditions
+- **Deterministic Behavior**: Consistent outputs for same inputs (temperature=0)
+- **Comprehensive Fallbacks**: Rule-based system when AI fails
+- **Patient Education**: Personalized warnings and guidance
 
-## 🏗️ Architecture
-
-- **Backend**: Flask with OpenAI integration
-- **Frontend**: Single-page application served from Flask
-- **AI**: OpenAI GPT-4o-mini for intelligent dosing
-- **Safety**: Rule-based fallbacks and hard caps
-- **Security**: Environment-based API key management
-
-## 📁 Project Structure
+## 🏗️ **Project Structure**
 
 ```
 AbsorpGen_AI/
-├── app.py                 # Main Flask application with OpenAI integration
-├── openai_client.py       # OpenAI client for dosing requests
-├── validators.py          # Pydantic models for request validation
-├── safety.py             # Red-flag detection logic
-├── dosing_rules.py       # Conservative dosing calculations
-├── otc_catalog.py        # OTC medication database
+├── app_simple.py           # Main Flask application with AI pharmacist
+├── openai_client.py        # AI pharmacist client and safety validation
+├── validators.py           # Pydantic models for request validation
+├── safety.py              # Red-flag detection and safety rules
+├── dosing_rules.py        # Conservative dosing calculations
+├── otc_catalog.py         # OTC medication database
 ├── public/
-│   └── index.html        # Frontend SPA
-├── requirements.txt       # Python dependencies
-├── .env.example          # Environment configuration template
-└── .gitignore            # Git ignore rules
+│   └── index.html         # Frontend SPA
+├── requirements.txt        # Python dependencies
+├── .env.example           # Environment configuration template
+├── .gitignore             # Git ignore rules
+└── README.md              # This file
 ```
 
-## 🛠️ Setup
+## 🛠️ **Setup**
 
-### 1. Install Dependencies
-
+### 1. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
-
-Create a `.env` file in the project root:
-
+### 2. **Environment Configuration**
 ```bash
 cp .env.example .env
+# Edit .env with your OpenAI API key:
+# OPENAI_API_KEY=sk-your_actual_key_here
+# OPENAI_MODEL=gpt-4o-mini
 ```
 
-Edit `.env` with your OpenAI API key:
-
-```env
-OPENAI_API_KEY=sk-your_actual_key_here
-OPENAI_MODEL=gpt-4o-mini
-```
-
-### 3. Run the Application
-
+### 3. **Run the Application**
 ```bash
-python app.py
+python app_simple.py
 ```
 
-Open your browser to: http://localhost:5000/
+### 4. **Access the Application**
+Open http://localhost:5000/ in your browser
 
-## 🔒 Security Features
+## 🧠 **How It Works**
 
-- **API keys stored server-side only** in `.env` file
-- **Never exposed to browser** - all AI calls happen on the server
-- **Environment-based configuration** for production deployment
-- **CORS protection** with explicit origin allowlisting
-
-## 🧠 How It Works
-
-### 1. User Input
-Users provide:
+### **1. Patient Input**
 - Demographics (age, sex, height, weight)
 - Symptoms and conditions
-- Pain level (1-10)
+- Pain level (1-10 scale)
 - Free-text notes (e.g., "I took Tylenol 2 hours ago and it didn't work")
 
-### 2. Safety Triage
-- Red-flag detection for dangerous symptoms
-- Automatic referral to medical care when needed
+### **2. AI Analysis**
+- **Medication Selection**: AI chooses optimal OTC medication
+- **Dosing Calculation**: Personalized dosing based on patient factors
+- **Safety Validation**: Multiple safety checks and constraints
+- **Patient Education**: Comprehensive warnings and guidance
 
-### 3. OTC Selection
-- Deterministic selection based on symptom matching
-- Avoids contraindicated medications
-- Considers recent medication history from notes
+### **3. Safety Validation**
+- **Age-based caps**: Conservative dosing for minors
+- **Condition-based adjustments**: Reduced doses for kidney/liver issues
+- **Hard safety limits**: Never exceed medical safety caps
+- **Alternative suggestions**: Safer options when needed
 
-### 4. AI-Powered Dosing
-- OpenAI generates personalized dosing instructions
-- Respects safety caps and medical guidelines
-- Falls back to rule-based dosing if AI fails
-
-### 5. Response Generation
-- Clean, actionable medication cards
+### **4. Response Generation**
+- Clean medication cards with dosing instructions
+- Safety warnings and patient education
+- Alternative medication suggestions
 - Timing advice for recent medications
-- Side effects and safety information
 
-## 📊 API Endpoints
+## 📊 **API Endpoints**
 
-### POST /recommend
-Main recommendation endpoint that processes user requests and returns medication guidance.
+### **POST /recommend**
+Main recommendation endpoint that processes patient requests.
 
 **Request:**
 ```json
 {
   "age": 35,
-  "sex": "F",
-  "height_cm": 165,
-  "weight_kg": 60,
+  "sex": "M",
+  "height_cm": 170,
+  "weight_kg": 70,
   "symptoms": ["headache", "fever"],
   "allergies": ["penicillin"],
   "conditions": ["hypertension"],
@@ -128,54 +104,58 @@ Main recommendation endpoint that processes user requests and returns medication
   "drug_name": "Advil (Ibuprofen)",
   "dosage": "2 tablets (200mg each)",
   "frequency": "every 6–8 hours with food as needed",
-  "side_effects": "May cause stomach irritation...",
-  "timing_advice": "You reported taking Tylenol about 2 hours ago...",
-  "dose_basis": {
-    "suggested_single_dose_mg": 400,
-    "single_dose_cap_mg": 800,
-    "llm_used": true,
-    "policy": "LLM dosing with BSA + age/condition reductions + hard OTC single-dose cap fallback"
+  "safety_validation": {
+    "is_safe": true,
+    "warning": "Dose validated and safe",
+    "dose_reduced": false
+  },
+  "ai_pharmacist": {
+    "medication_selected": {
+      "reasoning": "Best choice for your pain and inflammation",
+      "safety_notes": "Take with food to minimize stomach irritation"
+    },
+    "patient_education": {
+      "key_points": ["Take with food", "Stay hydrated"],
+      "warnings": ["Avoid if you have ulcers"],
+      "when_to_seek_help": "If pain persists beyond 3 days"
+    }
   }
 }
 ```
 
-### GET /health
-Health check endpoint that includes LLM connectivity status.
-
+### **GET /health**
+Health check endpoint with AI pharmacist status.
 ```json
 {
   "ok": true,
-  "llm_ok": true
+  "ai_pharmacist_ok": true
 }
 ```
 
-## 🔧 Configuration
+## 🔒 **Safety Features**
 
-### Environment Variables
+- **Multi-Layer Validation**: AI → Safety → Fallback
+- **Hard Dosing Caps**: Never exceed medical safety limits
+- **Context-Aware Routing**: Avoid recently ineffective medications
+- **Condition-Based Adjustments**: Reduced doses for high-risk patients
+- **Alternative Suggestions**: Safer options when primary choice has concerns
 
-- `OPENAI_API_KEY`: Your OpenAI API key (required)
-- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4o-mini)
+## 🎯 **Patentable Innovations**
 
-### CORS Configuration
+1. **Multi-Layer AI Safety Architecture**: AI constrained by safety validation layers
+2. **Context-Aware Medication Routing**: Intelligent routing based on patient history
+3. **Deterministic Medical AI**: Consistent outputs with safety validation
+4. **Pain-Adaptive Dosing**: Medication selection based on pain level
+5. **Notes-Aware History**: Natural language parsing of medication history
 
-The application serves the frontend from the same origin (port 5000) to avoid CORS issues. If you need to serve from a different port, update the `ALLOWED_ORIGINS` in `app.py`.
+## 🚨 **Important Disclaimers**
 
-## 🧪 Testing
+- **Proof of Concept**: This is a demonstration system
+- **Not Medical Advice**: Always consult qualified healthcare professionals
+- **Educational Purpose**: For research and development purposes only
+- **Safety First**: Multiple validation layers ensure patient safety
 
-The application includes comprehensive error handling and fallbacks:
-
-- **LLM failures** automatically fall back to rule-based dosing
-- **API key issues** don't crash the application
-- **Invalid responses** are caught and handled gracefully
-
-## 🚨 Safety Features
-
-- **Hard dosing caps** that cannot be exceeded
-- **Age and condition-based reductions** for conservative dosing
-- **Contraindication checking** against allergies and conditions
-- **Recent medication awareness** to avoid over-dosing
-
-## 🔮 Future Enhancements
+## 🔮 **Future Enhancements**
 
 - Integration with external drug databases (OpenFDA, RxNorm)
 - Machine learning models for improved dosing accuracy
@@ -183,10 +163,10 @@ The application includes comprehensive error handling and fallbacks:
 - Mobile application
 - Electronic health record integration
 
-## 📝 License
+## 📝 **License**
 
 This project is for educational and research purposes. Always consult qualified medical professionals for actual medical advice.
 
-## ⚠️ Disclaimer
+---
 
-**IMPORTANT**: AbsorpGen AI is a proof-of-concept and not a substitute for professional medical advice. Always consult a qualified clinician for diagnosis and treatment. 
+**AbsorpGen AI**: Where AI meets medical safety for intelligent medication recommendations. 
