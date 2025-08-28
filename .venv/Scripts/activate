@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\harsh\OneDrive\Desktop\AbsorpGen-AI_MachineLearning\.venv"
+VIRTUAL_ENV="C:\Users\harsh\OneDrive\Desktop\AbsorpbGen_AI\.venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
