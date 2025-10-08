@@ -82,7 +82,7 @@
     // - If you serve from another port (e.g., 8080), force it to hit Flask on 5000.
     const API_BASE = (window.location.port === '5000')
       ? window.location.origin
-      : 'http://127.0.0.1:5000';
+      : 'http://localhost:5000';  // Changed from 127.0.0.1 to localhost for better compatibility
 
     const form = document.getElementById('form');
     const out = document.getElementById('out');
@@ -218,7 +218,10 @@
         const res = await fetch(`${API_BASE}/recommend`, {
           method: 'POST',
           mode: 'cors',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
           body: JSON.stringify(payload),
           cache: 'no-store',
         });

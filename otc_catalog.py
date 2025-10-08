@@ -14,7 +14,7 @@ OTC = {
         "unit_mg": 500,                   # common OTC tablet
         "single_dose_cap_mg": 1000,       # per-dose cap
         "max_daily_mg": 3000,             # conservative daily max (demo)
-        "symptoms": ["fever", "headache", "pain", "sore throat", "toothache"],
+        "symptoms": ["fever", "headache", "tension headache", "migraine", "pain", "sore throat", "throat pain", "toothache", "dental pain", "mouth pain", "mild fever", "common cold", "flu symptoms"],
         "avoid_if": [],
         "frequency_hours": 6,              # every 6 hours
         "frequency_label": "every 6 hours as needed",
@@ -27,7 +27,7 @@ OTC = {
         "unit_mg": 200,
         "single_dose_cap_mg": 800,
         "max_daily_mg": 1200,             # conservative OTC daily max
-        "symptoms": ["muscle aches", "joint pain", "sprain", "back pain", "inflammation"],
+        "symptoms": ["muscle aches", "muscle pain", "sore muscles", "joint pain", "knee pain", "back pain", "neck pain", "shoulder pain", "sprain", "strain", "inflammation", "swelling", "bruise", "minor injury", "headache", "tension headache", "migraine", "pain", "menstrual cramps", "period pain", "pms symptoms", "fever", "mild fever"],
         "avoid_if": ["ulcer", "gi bleed", "kidney", "renal", "pregnan"],
         "frequency_hours": 6,              # 6–8 is typical; we render 6–8 below
         "frequency_label": "every 6–8 hours with food as needed",
@@ -92,7 +92,7 @@ OTC = {
         "unit_mg": 10,
         "single_dose_cap_mg": 20,
         "max_daily_mg": 40,
-        "symptoms": ["heartburn", "acid reflux", "indigestion"],
+        "symptoms": ["heartburn", "acid reflux", "indigestion", "sour stomach", "upset stomach", "stomach ache", "stomach pain", "abdominal pain", "belly ache", "stomach upset"],
         "avoid_if": [],
         "frequency_hours": 12,
         "frequency_label": "once or twice daily as needed",
@@ -118,7 +118,7 @@ OTC = {
         "unit_mg": 500,
         "single_dose_cap_mg": 1000,
         "max_daily_mg": 3000,
-        "symptoms": ["heartburn", "sour stomach", "indigestion"],
+        "symptoms": ["heartburn", "sour stomach", "indigestion", "acid reflux", "upset stomach", "stomach ache", "stomach pain", "abdominal pain", "belly ache", "stomach upset"],
         "avoid_if": [],
         "frequency_hours": 4,
         "frequency_label": "as needed per label",
