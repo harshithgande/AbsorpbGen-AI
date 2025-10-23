@@ -10,16 +10,152 @@ class MedicineApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AbsorpGen AI - Medicine Dosage',
+      title: 'AbsorpGen AI',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MedicineForm(),
+      home: HomePage(),
     );
   }
 }
 
+// ===== PAGE 1: HOME PAGE =====
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Map<String, String>> medicationHistory = [
+    {'name': 'Ibuprofen', 'dose': '400 mg'},
+    {'name': 'Ibuprofen', 'dose': '400 mg'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome header
+              Text(
+                'Welcome',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 40),
+              
+              // Past History Section
+              Text(
+                'Past History',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              
+              // Medication history list
+              Expanded(
+                child: ListView.builder(
+                  itemCount: medicationHistory.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            medicationHistory[index]['name']!,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            medicationHistory[index]['dose']!,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              SizedBox(height: 20),
+              
+              // Let AI Select Button
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MedicineForm()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Let AI Select',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+              
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+      
+      // Bottom Navigation Bar
+      bottomNavigationBar: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.teal[700],
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.home, color: Colors.white, size: 32),
+              onPressed: () {},
+            ),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.add, color: Colors.white, size: 32),
+            ),
+            IconButton(
+              icon: Icon(Icons.settings, color: Colors.white, size: 32),
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ===== PAGE 2: MEDICINE FORM (DETAILS) =====
 class MedicineForm extends StatefulWidget {
   @override
   _MedicineFormState createState() => _MedicineFormState();
@@ -42,12 +178,11 @@ class _MedicineFormState extends State<MedicineForm> {
   List<String> _selectedAllergies = [];
   List<String> _selectedConditions = [];
   
-  // API config - CHANGE THIS TO YOUR BACKEND URL
+  // API config
   String _apiBaseUrl = 'http://127.0.0.1:5000';
   
   // Loading state
   bool _isLoading = false;
-  Map<String, dynamic>? _recommendation;
   String? _error;
 
   // Available options
@@ -86,7 +221,6 @@ class _MedicineFormState extends State<MedicineForm> {
       return;
     }
 
-    // Check that at least one symptom is selected (required by your backend)
     if (_selectedSymptoms.isEmpty) {
       setState(() {
         _error = 'Please select at least one symptom';
@@ -97,18 +231,15 @@ class _MedicineFormState extends State<MedicineForm> {
     setState(() {
       _isLoading = true;
       _error = null;
-      _recommendation = null;
     });
 
     try {
-      // Build payload matching your Pydantic UserRequest model
       final Map<String, dynamic> payload = {
-        'symptoms': _selectedSymptoms, // Required field
-        'allergies': _selectedAllergies, // Optional, defaults to []
-        'conditions': _selectedConditions, // Optional, defaults to []
+        'symptoms': _selectedSymptoms,
+        'allergies': _selectedAllergies,
+        'conditions': _selectedConditions,
       };
       
-      // Add optional fields only if provided
       if (_ageController.text.isNotEmpty) {
         payload['age'] = int.parse(_ageController.text);
       }
@@ -137,10 +268,16 @@ class _MedicineFormState extends State<MedicineForm> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          _recommendation = data;
           _isLoading = false;
         });
-        _scrollToRecommendation();
+        
+        // Navigate to results page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultsPage(recommendation: data),
+          ),
+        );
       } else {
         throw Exception('API Error: ${response.statusCode}');
       }
@@ -152,79 +289,55 @@ class _MedicineFormState extends State<MedicineForm> {
     }
   }
 
-  void _scrollToRecommendation() {
-    Future.delayed(Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.teal[700],
       appBar: AppBar(
-        title: Text('AbsorpGen AI'),
-        backgroundColor: Colors.blue[600],
-        elevation: 2,
-      ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(),
-              SizedBox(height: 24),
-              _buildBasicInfoSection(),
-              SizedBox(height: 20),
-              _buildSymptomsSection(),
-              SizedBox(height: 20),
-              _buildAllergiesSection(),
-              SizedBox(height: 20),
-              _buildConditionsSection(),
-              SizedBox(height: 20),
-              _buildPainLevelSection(),
-              SizedBox(height: 20),
-              _buildNotesSection(),
-              SizedBox(height: 24),
-              _buildSubmitButton(),
-              if (_isLoading) _buildLoadingIndicator(),
-              if (_error != null) _buildErrorCard(),
-              if (_recommendation != null) _buildRecommendationCard(),
-              SizedBox(height: 100), // Extra space at bottom
-            ],
-          ),
+        title: Text('Details', style: TextStyle(color: Colors.white, fontSize: 24)),
+        backgroundColor: Colors.teal[700],
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(Icons.medication, size: 48, color: Colors.blue[600]),
-            SizedBox(height: 8),
-            Text(
-              'AI Medicine Dosage Assistant',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+      body: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: 10),
+                _buildBasicInfoSection(),
+                SizedBox(height: 20),
+                _buildSymptomsSection(),
+                SizedBox(height: 20),
+                _buildAllergiesSection(),
+                SizedBox(height: 20),
+                _buildConditionsSection(),
+                SizedBox(height: 20),
+                _buildPainLevelSection(),
+                SizedBox(height: 20),
+                _buildNotesSection(),
+                SizedBox(height: 24),
+                _buildSubmitButton(),
+                if (_isLoading) _buildLoadingIndicator(),
+                if (_error != null) _buildErrorCard(),
+                SizedBox(height: 100),
+              ],
             ),
-            SizedBox(height: 4),
-            Text(
-              'Get personalized OTC medication recommendations',
-              style: TextStyle(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -256,7 +369,7 @@ class _MedicineFormState extends State<MedicineForm> {
                         final age = int.tryParse(value);
                         if (age == null || age < 0 || age > 120) return 'Invalid age (0-120)';
                       }
-                      return null; // Optional field
+                      return null;
                     },
                   ),
                 ),
@@ -295,7 +408,7 @@ class _MedicineFormState extends State<MedicineForm> {
                         final height = double.tryParse(value);
                         if (height == null || height < 30 || height > 250) return 'Invalid height (30-250cm)';
                       }
-                      return null; // Optional field
+                      return null;
                     },
                   ),
                 ),
@@ -314,7 +427,7 @@ class _MedicineFormState extends State<MedicineForm> {
                         final weight = double.tryParse(value);
                         if (weight == null || weight < 1 || weight > 400) return 'Invalid weight (1-400kg)';
                       }
-                      return null; // Optional field
+                      return null;
                     },
                   ),
                 ),
@@ -354,8 +467,8 @@ class _MedicineFormState extends State<MedicineForm> {
                       }
                     });
                   },
-                  selectedColor: Colors.blue[100],
-                  checkmarkColor: Colors.blue[800],
+                  selectedColor: Colors.teal[100],
+                  checkmarkColor: Colors.teal[800],
                 );
               }).toList(),
             ),
@@ -476,6 +589,7 @@ class _MedicineFormState extends State<MedicineForm> {
                     max: 10,
                     divisions: 9,
                     label: _painLevel.toString(),
+                    activeColor: Colors.teal[700],
                     onChanged: (value) {
                       setState(() {
                         _painLevel = value.round();
@@ -512,9 +626,9 @@ class _MedicineFormState extends State<MedicineForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Additional Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Previous Medicine Taken', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            Text('Any recent medications, timing, or other details:', style: TextStyle(color: Colors.grey[600])),
+            Text('Any recent medications or timing:', style: TextStyle(color: Colors.grey[600])),
             SizedBox(height: 12),
             TextFormField(
               controller: _notesController,
@@ -535,13 +649,13 @@ class _MedicineFormState extends State<MedicineForm> {
     return ElevatedButton(
       onPressed: _selectedSymptoms.isEmpty || _isLoading ? null : _submitForm,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue[600],
+        backgroundColor: Colors.teal[700],
         foregroundColor: Colors.white,
         padding: EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(
-        _isLoading ? 'Getting Recommendation...' : 'Get Medicine Recommendation',
+        _isLoading ? 'Getting Recommendation...' : 'Run AbsorpGen AI',
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     );
@@ -552,7 +666,7 @@ class _MedicineFormState extends State<MedicineForm> {
       padding: EdgeInsets.all(24),
       child: Column(
         children: [
-          CircularProgressIndicator(),
+          CircularProgressIndicator(color: Colors.teal[700]),
           SizedBox(height: 16),
           Text('AI Pharmacist is analyzing your symptoms...', style: TextStyle(color: Colors.grey[600])),
         ],
@@ -582,274 +696,315 @@ class _MedicineFormState extends State<MedicineForm> {
       ),
     );
   }
+}
 
-  Widget _buildRecommendationCard() {
-    final rec = _recommendation!;
-    
-    // Check if this is a triage alert
-    if (rec.containsKey('triage_alert')) {
-      return Card(
-        color: Colors.red[50],
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(Icons.medical_services, color: Colors.red[600], size: 48),
-              SizedBox(height: 16),
-              Text(
-                rec['triage_alert'] ?? 'Medical Alert',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red[800]),
-              ),
-              SizedBox(height: 12),
-              Text(
-                rec['message'] ?? 'Please seek medical attention.',
-                style: TextStyle(fontSize: 16, color: Colors.red[700]),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _showEmergencyOptions(context),
-                icon: Icon(Icons.phone),
-                label: Text('Emergency Contacts'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red[600], foregroundColor: Colors.white),
-              ),
-            ],
+// ===== PAGE 3: RESULTS PAGE =====
+class ResultsPage extends StatelessWidget {
+  final Map<String, dynamic> recommendation;
+
+  ResultsPage({required this.recommendation});
+
+  @override
+  Widget build(BuildContext context) {
+    // Check if triage alert
+    if (recommendation.containsKey('triage_alert')) {
+      return Scaffold(
+        backgroundColor: Colors.teal[700],
+        appBar: AppBar(
+          title: Text('Results', style: TextStyle(color: Colors.white, fontSize: 24)),
+          backgroundColor: Colors.teal[700],
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.medical_services, color: Colors.red[600], size: 64),
+                SizedBox(height: 24),
+                Text(
+                  recommendation['triage_alert'] ?? 'Medical Alert',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red[800]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  recommendation['message'] ?? 'Please seek medical attention.',
+                  style: TextStyle(fontSize: 16, color: Colors.red[700]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () => _showEmergencyOptions(context),
+                  icon: Icon(Icons.phone),
+                  label: Text('Emergency Contacts'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[600],
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
+    // Normal recommendation
+    return Scaffold(
+      backgroundColor: Colors.teal[700],
+      appBar: AppBar(
+        title: Text('Results', style: TextStyle(color: Colors.white, fontSize: 24)),
+        backgroundColor: Colors.teal[700],
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: 10),
+              _buildDosageCard(),
+              SizedBox(height: 16),
+              _buildSafetyInfo(),
+              if (recommendation['timing_advice'] != null) ...[
+                SizedBox(height: 16),
+                _buildTimingAdvice(),
+              ],
+              if (recommendation['ai_pharmacist'] != null) ...[
+                SizedBox(height: 16),
+                _buildAIRecommendation(),
+              ],
+              SizedBox(height: 16),
+              _buildDisclaimer(),
+              SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDosageCard() {
     return Card(
-      color: Colors.green[50],
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dosage Recommendation',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  recommendation['drug_name']?.split('(')[0].trim() ?? 'Unknown',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  recommendation['dosage'] ?? 'See label',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Frequency',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                ),
+                Text(
+                  recommendation['frequency'] ?? 'As needed',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSafetyInfo() {
+    final safety = recommendation['safety_validation'];
+    final sideEffects = recommendation['side_effects'];
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  safety?['is_safe'] == true ? Icons.check_circle : Icons.warning,
+                  color: safety?['is_safe'] == true ? Colors.green[600] : Colors.orange[600],
+                  size: 24,
+                ),
+                SizedBox(width: 8),
+                Text('Safety Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            if (safety != null) ...[
+              SizedBox(height: 12),
+              Text(safety['warning'] ?? 'Dose validated and safe', style: TextStyle(fontSize: 14)),
+              if (safety['dose_reduced'] == true) ...[
+                SizedBox(height: 8),
+                Text('✓ Dose adjusted for your safety', 
+                  style: TextStyle(fontSize: 12, color: Colors.green[700], fontWeight: FontWeight.w500)),
+              ],
+            ],
+            if (sideEffects != null) ...[
+              SizedBox(height: 16),
+              Text('Possible Side Effects:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              SizedBox(height: 4),
+              Text(sideEffects, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimingAdvice() {
+    return Card(
+      color: Colors.amber[50],
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.access_time, color: Colors.amber[700], size: 24),
+                SizedBox(width: 8),
+                Text('Timing Advice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(recommendation['timing_advice'], style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIRecommendation() {
+    final aiRec = recommendation['ai_pharmacist'];
+    final medication = aiRec?['medication_selected'];
+    final education = aiRec?['patient_education'];
+    
+    return Card(
+      color: Colors.purple[50],
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.psychology, color: Colors.purple[600], size: 24),
+                SizedBox(width: 8),
+                Text('AI Pharmacist Insights', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            if (medication?['reasoning'] != null) ...[
+              SizedBox(height: 12),
+              Text('Selection Reasoning:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              SizedBox(height: 4),
+              Text(medication['reasoning'], style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+            ],
+            if (education?['key_points'] != null) ...[
+              SizedBox(height: 16),
+              Text('Key Points:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              SizedBox(height: 8),
+              ...List<Widget>.from(education['key_points'].map<Widget>((point) => 
+                Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• ', style: TextStyle(color: Colors.purple[600], fontSize: 16)),
+                      Expanded(child: Text(point, style: TextStyle(fontSize: 13))),
+                    ],
+                  ),
+                ),
+              )),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisclaimer() {
+    return Card(
+      color: Colors.grey[100],
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildMedicationHeader(rec),
-            SizedBox(height: 16),
-            _buildDosageInfo(rec),
-            SizedBox(height: 16),
-            _buildSafetyInfo(rec),
-            if (rec['timing_advice'] != null) ...[
-              SizedBox(height: 16),
-              _buildTimingAdvice(rec['timing_advice']),
-            ],
-            if (rec['ai_pharmacist'] != null) ...[
-              SizedBox(height: 16),
-              _buildAIRecommendation(rec['ai_pharmacist']),
-            ],
-            SizedBox(height: 16),
-            _buildDisclaimer(rec['medical_disclaimer']),
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey[600], size: 18),
+                SizedBox(width: 8),
+                Text('Medical Disclaimer', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              recommendation['medical_disclaimer'] ?? 'This is not a substitute for professional medical advice.',
+              style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMedicationHeader(Map<String, dynamic> rec) {
-    return Row(
-      children: [
-        Icon(Icons.medication, color: Colors.green[600], size: 32),
-        SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Recommended Medication',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              Text(
-                rec['drug_name'] ?? 'Unknown',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[800]),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDosageInfo(Map<String, dynamic> rec) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Dosage Instructions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.local_pharmacy, color: Colors.blue[600], size: 20),
-              SizedBox(width: 8),
-              Expanded(child: Text(rec['dosage'] ?? 'See label', style: TextStyle(fontSize: 16))),
-            ],
-          ),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.schedule, color: Colors.blue[600], size: 20),
-              SizedBox(width: 8),
-              Expanded(child: Text(rec['frequency'] ?? 'As needed', style: TextStyle(fontSize: 16))),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSafetyInfo(Map<String, dynamic> rec) {
-    final safety = rec['safety_validation'];
-    final sideEffects = rec['side_effects'];
-    
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: safety?['is_safe'] == true ? Colors.green[50] : Colors.orange[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: safety?['is_safe'] == true ? Colors.green[200]! : Colors.orange[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                safety?['is_safe'] == true ? Icons.check_circle : Icons.warning,
-                color: safety?['is_safe'] == true ? Colors.green[600] : Colors.orange[600],
-                size: 20,
-              ),
-              SizedBox(width: 8),
-              Text('Safety Information', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          if (safety != null) ...[
-            SizedBox(height: 8),
-            Text(safety['warning'] ?? 'Dose validated and safe', style: TextStyle(fontSize: 14)),
-            if (safety['dose_reduced'] == true) ...[
-              SizedBox(height: 4),
-              Text('✓ Dose adjusted for your safety', 
-                style: TextStyle(fontSize: 12, color: Colors.green[700], fontWeight: FontWeight.w500)),
-            ],
-          ],
-          if (sideEffects != null) ...[
-            SizedBox(height: 12),
-            Text('Possible Side Effects:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            SizedBox(height: 4),
-            Text(sideEffects, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimingAdvice(String advice) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.access_time, color: Colors.amber[600], size: 20),
-              SizedBox(width: 8),
-              Text('Timing Advice', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(advice, style: TextStyle(fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIRecommendation(Map<String, dynamic> aiRec) {
-    final medication = aiRec['medication_selected'];
-    final education = aiRec['patient_education'];
-    
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.purple[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.purple[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.psychology, color: Colors.purple[600], size: 20),
-              SizedBox(width: 8),
-              Text('AI Pharmacist Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          if (medication?['reasoning'] != null) ...[
-            SizedBox(height: 8),
-            Text('Selection Reasoning:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            Text(medication['reasoning'], style: TextStyle(fontSize: 13, color: Colors.grey[700])),
-          ],
-          if (education?['key_points'] != null) ...[
-            SizedBox(height: 12),
-            Text('Key Points:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            ...List<Widget>.from(education['key_points'].map<Widget>((point) => 
-              Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: Colors.purple[600])),
-                    Expanded(child: Text(point, style: TextStyle(fontSize: 13))),
-                  ],
-                ),
-              ),
-            )),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDisclaimer(String? disclaimer) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.grey[600], size: 16),
-              SizedBox(width: 8),
-              Text('Medical Disclaimer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          SizedBox(height: 4),
-          Text(
-            disclaimer ?? 'This is not a substitute for professional medical advice.',
-            style: TextStyle(fontSize: 11, color: Colors.grey[700]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEmergencyOptions(BuildContext context) {
+  static void _showEmergencyOptions(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -859,7 +1014,9 @@ class _MedicineFormState extends State<MedicineForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('🚨 Emergency: 911'),
+            SizedBox(height: 8),
             Text('☎️ Poison Control: 1-800-222-1222'),
+            SizedBox(height: 8),
             Text('🏥 Urgent Care: Find nearest location'),
             SizedBox(height: 16),
             Text('Please seek immediate medical attention for your symptoms.',
